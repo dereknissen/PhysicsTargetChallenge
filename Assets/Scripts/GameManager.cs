@@ -1,62 +1,49 @@
-using UnityEngine;
 using TMPro;
-
-public enum GameState
-{
-    Playing,
-    Won,
-    Lost
-}
-
+using UnityEngine;
+using UnityEngine.Rendering;
 public class GameManager : MonoBehaviour
 {
-
-    public GameState currentState = GameState.Playing;
-    public TMP_Text scoreText;
-    public static GameManager Instance;
-    public int score = 0;
+    public static GameManager Instance { get; private set; }
+    public enum GameState { Playing, Won, Lost }
     public int targetScore = 3;
+    public int startingAmmo = 10;
+    public TMP_Text scoreText, ammoText, resultText;
+    public GameState state = GameState.Playing;
+    private int score, ammo, projectilesInFlight;
     void Awake()
     {
+        if (Instance != null && Instance != this)
+        { Destroy(gameObject); return; }
         Instance = this;
+    }
+    void Start() { ammo = startingAmmo; UpdateHUD(); }
+    public bool CanShoot() => state == GameState.Playing && ammo > 0;
+    public void ShotFired()
+    {
+        if (!CanShoot()) return;
+        ammo--;
+        projectilesInFlight++;
+        UpdateHUD();
     }
     public void AddScore(int points)
     {
+        if (state != GameState.Playing) return;
         score += points;
-        UpdateScoreUI();
-        Debug.Log("Score: " + score);
-        if (score >= targetScore)
-        {
-            currentState = GameState.Won;
-            Debug.Log("You Win!");
-        }
+        if (score >= targetScore) state = GameState.Won;
+        UpdateHUD();
     }
-
-    void Start()
+    public void ProjectileFinished()
     {
-        UpdateScoreUI();
+        projectilesInFlight = Mathf.Max(0, projectilesInFlight - 1);
+        if (state == GameState.Playing && ammo == 0 && projectilesInFlight == 0)
+            state = GameState.Lost;
+        UpdateHUD();
     }
-
-    void UpdateScoreUI()
+    void UpdateHUD()
     {
-        scoreText.text = "Score: " + score;
+        if (scoreText) scoreText.text = "Score: " + score + "/" + targetScore;
+        if (ammoText) ammoText.text = "Ammo: " + ammo;
+        if (resultText) resultText.text = state == GameState.Won ? "YOU WIN!" :
+        state == GameState.Lost ? "GAME OVER!" : "";
     }
-
-    public int ammo = 10;
-    public bool CanShoot()
-    {
-        return currentState ==
-        GameState.Playing && ammo > 0;
-    }
-    public void UseAmmo()
-    {
-        ammo--;
-        if (ammo == 0 && score < targetScore)
-        {
-            currentState = GameState.Lost;
-            Debug.Log("Game Over!");
-        }
-    }
-
-
 }
